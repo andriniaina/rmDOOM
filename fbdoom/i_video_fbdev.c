@@ -415,26 +415,19 @@ void I_UpdateNoBlit (void)
 #define GFX_RGB565_B(color)			(0x001F & color)
 
 
-bool first = true;
 
-
-void drawPixel(int x, int y, int32_t red, int32_t green, int32_t blue, int32_t transparency) {
-
-    int scale = 4;
-
-    int xoffset = 0;
-    int yoffset = 0;
-
+void drawPixel(int scale, int xoffset, int yoffset, int x, int y, uint8_t red, uint8_t green, uint8_t blue, uint8_t transparency) {
     long int location = (xoffset + scale * x) * (fb.depth / 8) +
                         yoffset*fb.bytesPerLine + scale * y * fb.bytesPerLine;
 
-
     for (int y_scale = 0; y_scale < scale; ++y_scale) {
         for (int x_scale = 0; x_scale < scale; ++x_scale) {
-            
-            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 0) = red;
+
+            // BGR?
+            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 0) = blue;
             *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 1) = green;
-            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 2) = blue;
+            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 2) = red;
+
             *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 3) = 0;
         }
     }
@@ -443,135 +436,34 @@ void drawPixel(int x, int y, int32_t red, int32_t green, int32_t blue, int32_t t
 
 void I_FinishUpdate (void)
 {
-    // int y;
-    // int x_offset, y_offset, x_offset_end;
-    unsigned char *line_in, *line_out;
+    unsigned char *line_in;
 
-    /* Offsets in case FB is bigger than DOOM */
-    /* 600 = fb heigt, 200 screenheight */
-    /* 600 = fb heigt, 200 screenheight */
-    /* 2048 =fb width, 320 screenwidth */
-    // y_offset     = (((fb.height - (SCREENHEIGHT * fb_scaling)) * fb.depth/8)) / 2;
-    // x_offset     = (((fb.width - (SCREENWIDTH  * fb_scaling)) * fb.depth/8)) / 2; // XXX: siglent FB hack: /4 instead of /2, since it seems to handle the resolution in a funny way
-    //x_offset     = 0;
-    // x_offset_end = ((fb.width - (SCREENWIDTH  * fb_scaling)) * fb.depth/8) - x_offset;
+    int scale = 4;
+    int xoffset = fb.width / 2 - 320 / 2 * scale;
+    int yoffset = fb.height / 2 - 200 / 2 * scale;
 
-    int32_t blue = 0;
-    int32_t green = 0;
-    int32_t red = 0;
-    int32_t transparency = 0;    
-
-
-    /* DRAW SCREEN */
+    /* the next frame is in the buffer, now we need to draw it to
+       the rm_framebuffer */
     line_in  = (unsigned char *) I_VideoBuffer;
-    line_out = (unsigned char *) I_VideoBuffer_FB;
+
+    uint32_t magic = 2;
 
 
     for (int y = 0; y < SCREENHEIGHT; ++y) {
-        // int offset_y = y * fb.bytesPerLine;
-    //     // printf("offset_y: %d", offset_y);
-
         for (int x = 0; x < SCREENWIDTH; ++x) {
-
-
             char color_8bit = line_in[x + (y * SCREENWIDTH)];
             struct color c = colors[color_8bit]; 
-            red = ((uint16_t)(c.r >> 3)) << 11;
-            green = ((uint16_t)(c.g >> 2)) << 5;
-            blue = ((uint16_t)(c.b >> 3)) << 0;
-
-            // if (fb.depth == 32) {
-                // *(fb.fb + location + 0) = red * 2;
-                // *(fb.fb + location + 1) = green * 2;
-                // *(fb.fb + location + 2) = blue * 2;
-                // *(fb.fb + location + 3) = 0;
-
-            // } else {
-            //     printf("error, wrong depth\n");
-            // }
-
-            drawPixel(x, y, red, green, blue, 0);
+            drawPixel(scale, xoffset, yoffset, x, y, c.r,  c.g, c.b, 0);
         }
 	}
 
-    // if (first) {
-    //     // dump the first rendered screen to disk as raw pixels
-    //     printf("dump image\n");
-    //     first = false;
-    //     FILE *f;
-    //     f = fopen("img.bmp","wb");
-    //     fwrite(line_in, sizeof(byte), SCREENWIDTH * SCREENHEIGHT, f);
-    //     fclose(f);
-
-
-    //     // dump the color pallette
-    //     FILE *f2;
-    //     f2 = fopen("pallette","wb");
-    //     fwrite(colors, sizeof(byte), 256, f2);
-    //     fclose(f);
-    // }
-
-
-
-    rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, 2, 0);
-
-// rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, 0, 0);
-
-    // rm_framebuffer_update(&fb, 0, 0, SCREENWIDTH * 2, SCREENHEIGHT * 2, 2, 0);
-    // rm_framebuffer_update(&fb, 0, 0, SCREENWIDTH * 2, SCREENHEIGHT * 2, 0, 0);
-    // printf("frame buffer update done\n");
-
-
-
-
-
-
-
-
-//     y = SCREENHEIGHT;
-
-//     while (y--)
-//     {
-// //         int i;
-// //         for (i = 0; i < fb_scaling; i++) {
-// //             line_out += x_offset;
-// // #ifdef CMAP256
-// //             for (fb_scaling == 1) {
-// //                 memcpy(line_out, line_in, SCREENWIDTH); /* fb_width is bigger than Doom SCREENWIDTH... */
-// //             } else {
-// //                 //XXX FIXME fb_scaling support!
-// //             }
-// // #else
-// //             //cmap_to_rgb565((void*)line_out, (void*)line_in, SCREENWIDTH);
-// //             cmap_to_fb((void*)line_out, (void*)line_in, SCREENWIDTH);
-// // #endif
-// //             line_out += (SCREENWIDTH * fb_scaling * (fb.bits_per_pixel/8)) + x_offset_end;
-
-
-//         for (int i = 0; i < fb_scaling; i++) {
-//             line_out += x_offset;
-// #ifdef CMAP256
-//             if (fb_scaling == 1) {
-//                 memcpy(line_out, line_in, SCREENWIDTH); /* fb_width is bigger than Doom SCREENWIDTH... */
-//             } else {
-//                 //XXX FIXME fb_scaling support!
-//             }
-// #else
-//             //cmap_to_rgb565((void*)line_out, (void*)line_in, SCREENWIDTH);
-//             cmap_to_fb((void*)line_out, (void*)line_in, SCREENWIDTH);
-// #endif
-//             line_out += (SCREENWIDTH * fb_scaling * (fb.depth/8)) + x_offset_end;
-
-//             // printf("draw line: %d\n", y);
-//         }
-//         line_in += SCREENWIDTH;
-//     }
-
-
-
-    /* Start drawing from y-offset */
-    // lseek(fd_fb, y_offset * fb.xres, SEEK_SET);
-    // write(fd_fb, I_VideoBuffer_FB, (SCREENHEIGHT * fb_scaling * (fb.bits_per_pixel/8)) * fb.xres); /* draw only portion used by doom + x-offsets */
+    const int pen_mode = 0;       // colored, we violate the pre-conditions (no flipping while waveform is running)
+    const int mono_mode = 1;      // uhhh, mono, looks horrible
+    const int animation_mode = 2; // grayscale, fast, lots of ghosting
+    const int ui_mode = 3;        // looks good, way too slow, horrible framerate
+    const int content_mode = 4;   // good looking, extra slow
+    
+    rm_framebuffer_update(&fb, xoffset, yoffset, scale * 320, scale * 200, pen_mode, 0);
 }
 
 //
