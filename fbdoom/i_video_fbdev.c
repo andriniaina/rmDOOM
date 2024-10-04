@@ -52,12 +52,7 @@ rcsid[] = "$Id: i_x.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 
 #define CMAP256
 
-// struct fb_var_screeninfo fb = {};
-
-
-
 rm_framebuffer fb;
-
 
 int fb_scaling = 1;
 int usemouse = 0;
@@ -169,6 +164,7 @@ void cmap_to_fb(uint8_t * out, uint8_t * in, int in_pixels)
     // }
 }
 
+
 void I_InitGraphics (void)
 {
     int i;
@@ -191,11 +187,9 @@ void I_InitGraphics (void)
     // printf("I_InitGraphics: framebuffer: RGBA: %d%d%d%d, red_off: %d, green_off: %d, blue_off: %d, transp_off: %d\n",
     //         fb.red.length, fb.green.length, fb.blue.length, fb.transp.length, fb.red.offset, fb.green.offset, fb.blue.offset, fb.transp.offset);
 
-    // printf("I_InitGraphics: DOOM screen size: w x h: %d x %d\n", SCREENWIDTH, SCREENHEIGHT);
-
-
+    printf("I_InitGraphics: DOOM screen size: w x h: %d x %d\n", SCREENWIDTH, SCREENHEIGHT);
     rm_init_framebuffer(&fb);
-
+    printf("I_InitGraphics: epaper screen size: w x h: %d x %d depth: %d bytesPerLine: %d\n", fb.width, fb.height, fb.depth, fb.bytesPerLine);
 
     // i = M_CheckParmWithArgs("-scaling", 1);
     // if (i > 0) {
@@ -209,10 +203,9 @@ void I_InitGraphics (void)
     //     printf("I_InitGraphics: Auto-scaling factor: %d\n", fb_scaling);
     // }
 
-
     /* Allocate screen to draw to */
-	// I_VideoBuffer = (byte*)Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);  // For DOOM to draw on
-	// I_VideoBuffer_FB = (byte*)malloc(fb.xres * fb.yres * (fb.bits_per_pixel/8));     // For a single write() syscall to fbdev
+	I_VideoBuffer = (byte*)Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);  // For DOOM to draw on
+	I_VideoBuffer_FB = (byte*)malloc(fb.width * fb.height * (fb.depth/8));     // For a single write() syscall to fbdev
 
 	screenvisible = true;
 
@@ -415,34 +408,136 @@ void I_UpdateNoBlit (void)
 // I_FinishUpdate
 //
 
+
+#define GFX_RGB565(r, g, b)			((((r & 0xF8) >> 3) << 11) | (((g & 0xFC) >> 2) << 5) | ((b & 0xF8) >> 3))
+#define GFX_RGB565_R(color)			((0xF800 & color) >> 11)
+#define GFX_RGB565_G(color)			((0x07E0 & color) >> 5)
+#define GFX_RGB565_B(color)			(0x001F & color)
+
+
+bool first = true;
+
 void I_FinishUpdate (void)
 {
-    int y;
-    int x_offset, y_offset, x_offset_end;
+    // int y;
+    // int x_offset, y_offset, x_offset_end;
     unsigned char *line_in, *line_out;
 
     /* Offsets in case FB is bigger than DOOM */
     /* 600 = fb heigt, 200 screenheight */
     /* 600 = fb heigt, 200 screenheight */
     /* 2048 =fb width, 320 screenwidth */
-    y_offset     = (((fb.height - (SCREENHEIGHT * fb_scaling)) * fb.depth/8)) / 2;
-    x_offset     = (((fb.width - (SCREENWIDTH  * fb_scaling)) * fb.depth/8)) / 2; // XXX: siglent FB hack: /4 instead of /2, since it seems to handle the resolution in a funny way
+    // y_offset     = (((fb.height - (SCREENHEIGHT * fb_scaling)) * fb.depth/8)) / 2;
+    // x_offset     = (((fb.width - (SCREENWIDTH  * fb_scaling)) * fb.depth/8)) / 2; // XXX: siglent FB hack: /4 instead of /2, since it seems to handle the resolution in a funny way
     //x_offset     = 0;
-    x_offset_end = ((fb.width - (SCREENWIDTH  * fb_scaling)) * fb.depth/8) - x_offset;
+    // x_offset_end = ((fb.width - (SCREENWIDTH  * fb_scaling)) * fb.depth/8) - x_offset;
+
+
+    // printf("y_offset: %d", y_offset);
+    // printf("x_offset: %d", x_offset);
+    // printf("y_offset_end: %d", x_offset_end);
+    
+
+    // int32_t blue = 255;
+    // int32_t green = 255;
+    // int32_t red = 255;
+    // int32_t transparency = 0;  
+    int32_t blue = 0;
+    int32_t green = 0;
+    int32_t red = 0;
+    int32_t transparency = 0;    
+
 
     /* DRAW SCREEN */
     line_in  = (unsigned char *) I_VideoBuffer;
     line_out = (unsigned char *) I_VideoBuffer_FB;
 
-    y = SCREENHEIGHT;
+    int scale = 2;
 
-    while (y--)
-    {
-//         int i;
-//         for (i = 0; i < fb_scaling; i++) {
+    for (int y = 0; y < SCREENHEIGHT; ++y) {
+        // int offset_y = y * fb.bytesPerLine;
+    //     // printf("offset_y: %d", offset_y);
+
+        for (int x = 0; x < SCREENWIDTH; ++x) {
+
+            long int location;
+            location = scale * x * (fb.depth / 8) +
+                       scale * y * fb.bytesPerLine;
+
+            if (fb.depth == 32) {
+                *(fb.fb + location + 0) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
+                *(fb.fb + location + 1) = (line_in[x + (y * SCREENWIDTH)]);     // green
+                *(fb.fb + location + 2) = (line_in[x + (y * SCREENWIDTH)]);    // red
+                *(fb.fb + location + 3) = 0;      // transparency
+   
+                *(fb.fb + location + 4) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
+                *(fb.fb + location + 5) = (line_in[x + (y * SCREENWIDTH)]);     // green
+                *(fb.fb + location + 6) = (line_in[x + (y * SCREENWIDTH)]);    // red
+                *(fb.fb + location + 7) = 0;      // transparency
+   
+                *(fb.fb + location + 0 + y * fb.bytesPerLine) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
+                *(fb.fb + location + 1 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);     // green
+                *(fb.fb + location + 2 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);    // red
+                *(fb.fb + location + 3 + y * fb.bytesPerLine) = 0;      // transparency
+   
+                *(fb.fb + location + 4 + y * fb.bytesPerLine) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
+                *(fb.fb + location + 5 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);     // green
+                *(fb.fb + location + 6 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);    // red
+                *(fb.fb + location + 7 + y * fb.bytesPerLine) = 0;      // transparency
+   
+
+            } else {
+                printf("error, wrong depth\n");
+            }
+        }
+	}
+
+    // if (first) {
+    //     printf("dump image\n");
+    //     first = false;
+    //     FILE *f;
+    //     f = fopen("img.bmp","wb");
+    //     fwrite(line_in, sizeof(byte), SCREENWIDTH * SCREENHEIGHT, f);
+    //     fclose(f);
+    // }
+
+
+
+    // rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, 0, 0);
+    rm_framebuffer_update(&fb, 0, 0, SCREENWIDTH * 2, SCREENHEIGHT * 2, 2, 0);
+    // printf("frame buffer update done\n");
+
+
+
+
+
+
+
+
+//     y = SCREENHEIGHT;
+
+//     while (y--)
+//     {
+// //         int i;
+// //         for (i = 0; i < fb_scaling; i++) {
+// //             line_out += x_offset;
+// // #ifdef CMAP256
+// //             for (fb_scaling == 1) {
+// //                 memcpy(line_out, line_in, SCREENWIDTH); /* fb_width is bigger than Doom SCREENWIDTH... */
+// //             } else {
+// //                 //XXX FIXME fb_scaling support!
+// //             }
+// // #else
+// //             //cmap_to_rgb565((void*)line_out, (void*)line_in, SCREENWIDTH);
+// //             cmap_to_fb((void*)line_out, (void*)line_in, SCREENWIDTH);
+// // #endif
+// //             line_out += (SCREENWIDTH * fb_scaling * (fb.bits_per_pixel/8)) + x_offset_end;
+
+
+//         for (int i = 0; i < fb_scaling; i++) {
 //             line_out += x_offset;
 // #ifdef CMAP256
-//             for (fb_scaling == 1) {
+//             if (fb_scaling == 1) {
 //                 memcpy(line_out, line_in, SCREENWIDTH); /* fb_width is bigger than Doom SCREENWIDTH... */
 //             } else {
 //                 //XXX FIXME fb_scaling support!
@@ -451,34 +546,18 @@ void I_FinishUpdate (void)
 //             //cmap_to_rgb565((void*)line_out, (void*)line_in, SCREENWIDTH);
 //             cmap_to_fb((void*)line_out, (void*)line_in, SCREENWIDTH);
 // #endif
-//             line_out += (SCREENWIDTH * fb_scaling * (fb.bits_per_pixel/8)) + x_offset_end;
+//             line_out += (SCREENWIDTH * fb_scaling * (fb.depth/8)) + x_offset_end;
+
+//             // printf("draw line: %d\n", y);
+//         }
+//         line_in += SCREENWIDTH;
+//     }
 
 
-        for (int i = 0; i < fb_scaling; i++) {
-            line_out += x_offset;
-#ifdef CMAP256
-            if (fb_scaling == 1) {
-                memcpy(line_out, line_in, SCREENWIDTH); /* fb_width is bigger than Doom SCREENWIDTH... */
-            } else {
-                //XXX FIXME fb_scaling support!
-            }
-#else
-            //cmap_to_rgb565((void*)line_out, (void*)line_in, SCREENWIDTH);
-            cmap_to_fb((void*)line_out, (void*)line_in, SCREENWIDTH);
-#endif
-            line_out += (SCREENWIDTH * fb_scaling * (fb.depth/8)) + x_offset_end;
-
-
-        }
-        line_in += SCREENWIDTH;
-    }
 
     /* Start drawing from y-offset */
     // lseek(fd_fb, y_offset * fb.xres, SEEK_SET);
     // write(fd_fb, I_VideoBuffer_FB, (SCREENHEIGHT * fb_scaling * (fb.bits_per_pixel/8)) * fb.xres); /* draw only portion used by doom + x-offsets */
-
-
-
 }
 
 //
@@ -492,11 +571,6 @@ void I_ReadScreen (byte* scr)
 //
 // I_SetPalette
 //
-#define GFX_RGB565(r, g, b)			((((r & 0xF8) >> 3) << 11) | (((g & 0xFC) >> 2) << 5) | ((b & 0xF8) >> 3))
-#define GFX_RGB565_R(color)			((0xF800 & color) >> 11)
-#define GFX_RGB565_G(color)			((0x07E0 & color) >> 5)
-#define GFX_RGB565_B(color)			(0x001F & color)
-
 void I_SetPalette (byte* palette)
 {
 	int i;

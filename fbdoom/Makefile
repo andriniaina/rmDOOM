@@ -5,7 +5,7 @@
 # $Log:$
 #
 
-CROSS_COMPILE ?= #arm-linux-gnueabihf-
+CROSS_COMPILE ?= aarch64-remarkable-linux-
 
 ifeq ($(V),1)
 	VB=''
@@ -19,15 +19,18 @@ endif
 OBJS+=$(OBJDIR)/i_video_fbdev.o
 OBJS+=$(OBJDIR)/i_input_tty.o
 
-CC=$(CROSS_COMPILE)gcc  # gcc or g++
-CFLAGS+=-ggdb3 -Os
-LDFLAGS+=-Wl,--gc-sections
+
+SWTCON=/home/frederik/dev/remarkable/qsgepaper/build/f2_mixed_static/swtcon/libswtcon/libswtcon.a
+
+CC=$(CROSS_COMPILE)g++  # gcc or g++
+CFLAGS+=-ggdb3 -Os -I$(OECORE_TARGET_SYSROOT)/usr/include -I/home/frederik/dev/remarkable/qsgepaper/swtcon/libswtcon/include/
+LDFLAGS+=-Wl,--gc-sections -L$(OECORE_TARGET_SYSROOT)/usr/lib -L$(OECORE_TARGET_SYSROOT)/lib --sysroot=$(OECORE_TARGET_SYSROOT) -l$(SWTCON)
 CFLAGS+=-ggdb3 -Wall -DNORMALUNIX -DLINUX -DSNDSERV # -DUSEASM
 LIBS+=-lm -lc
 
-ifneq ($(NOSDL),1)
-	LIBS+= -lSDL
-endif
+# ifneq ($(NOSDL),1)
+# 	LIBS+= -lSDL
+# endif
 
 # subdirectory for objects
 OBJDIR=build
@@ -46,8 +49,12 @@ clean:
 
 $(OUTPUT):	$(OBJS)
 	@echo [Linking $@]
+	@echo $(VB)$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) \
+	-o $(OUTPUT) $(LIBS) -Wl,-Map,$(OUTPUT).map
+
 	$(VB)$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) \
 	-o $(OUTPUT) $(LIBS) -Wl,-Map,$(OUTPUT).map
+
 	@echo [Size]
 	-$(CROSS_COMPILE)size $(OUTPUT)
 

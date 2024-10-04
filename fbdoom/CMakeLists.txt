@@ -41,12 +41,8 @@ i_main.c dummy.c am_map.c doomdef.c doomstat.c dstrings.c d_event.c d_items.c d_
 
 find_package(Qt6 COMPONENTS Core Gui)
 
-target_include_directories(rmdoom PRIVATE /home/frederik/dev/remarkable/qsgepaper/src/epframebuffer/include)
 target_link_libraries(rmdoom PRIVATE
-    Qt::Gui
-    /home/frederik/dev/remarkable/qsgepaper/build/f2_mixed_static/src/epframebuffer/libepframebuffer.a
-    /home/frederik/dev/remarkable/qsgepaper/build/f2_mixed_static/swtcon/libswtcon/libswtcon.a
-    stdc++
+    epframebuffer
 )
 
 target_compile_definitions(rmdoom
