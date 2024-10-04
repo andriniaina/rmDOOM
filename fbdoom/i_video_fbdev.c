@@ -417,6 +417,30 @@ void I_UpdateNoBlit (void)
 
 bool first = true;
 
+
+void drawPixel(int x, int y, int32_t red, int32_t green, int32_t blue, int32_t transparency) {
+
+    int scale = 4;
+
+    int xoffset = 0;
+    int yoffset = 0;
+
+    long int location = (xoffset + scale * x) * (fb.depth / 8) +
+                        yoffset*fb.bytesPerLine + scale * y * fb.bytesPerLine;
+
+
+    for (int y_scale = 0; y_scale < scale; ++y_scale) {
+        for (int x_scale = 0; x_scale < scale; ++x_scale) {
+            
+            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 0) = red;
+            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 1) = green;
+            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 2) = blue;
+            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 3) = 0;
+        }
+    }
+}
+
+
 void I_FinishUpdate (void)
 {
     // int y;
@@ -432,16 +456,6 @@ void I_FinishUpdate (void)
     //x_offset     = 0;
     // x_offset_end = ((fb.width - (SCREENWIDTH  * fb_scaling)) * fb.depth/8) - x_offset;
 
-
-    // printf("y_offset: %d", y_offset);
-    // printf("x_offset: %d", x_offset);
-    // printf("y_offset_end: %d", x_offset_end);
-    
-
-    // int32_t blue = 255;
-    // int32_t green = 255;
-    // int32_t red = 255;
-    // int32_t transparency = 0;  
     int32_t blue = 0;
     int32_t green = 0;
     int32_t red = 0;
@@ -452,7 +466,6 @@ void I_FinishUpdate (void)
     line_in  = (unsigned char *) I_VideoBuffer;
     line_out = (unsigned char *) I_VideoBuffer_FB;
 
-    int scale = 2;
 
     for (int y = 0; y < SCREENHEIGHT; ++y) {
         // int offset_y = y * fb.bytesPerLine;
@@ -460,55 +473,52 @@ void I_FinishUpdate (void)
 
         for (int x = 0; x < SCREENWIDTH; ++x) {
 
-            long int location;
-            location = scale * x * (fb.depth / 8) +
-                       scale * y * fb.bytesPerLine;
+
+            char color_8bit = line_in[x + (y * SCREENWIDTH)];
+            struct color c = colors[color_8bit]; 
+            red = ((uint16_t)(c.r >> 3)) << 11;
+            green = ((uint16_t)(c.g >> 2)) << 5;
+            blue = ((uint16_t)(c.b >> 3)) << 0;
 
             // if (fb.depth == 32) {
-                *(fb.fb + location + 0) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
-                *(fb.fb + location + 1) = (line_in[x + (y * SCREENWIDTH)]);     // green
-                *(fb.fb + location + 2) = (line_in[x + (y * SCREENWIDTH)]);    // red
-                *(fb.fb + location + 3) = 0;      // transparency
-   
-                *(fb.fb + location + 4) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
-                *(fb.fb + location + 5) = (line_in[x + (y * SCREENWIDTH)]);     // green
-                *(fb.fb + location + 6) = (line_in[x + (y * SCREENWIDTH)]);    // red
-                *(fb.fb + location + 7) = 0;      // transparency
-   
-
-            location = scale * x * (fb.depth / 8) +
-                       scale * (y + 1) * fb.bytesPerLine;
-
-                *(fb.fb + location + 0) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
-                *(fb.fb + location + 1) = (line_in[x + (y * SCREENWIDTH)]);     // green
-                *(fb.fb + location + 2) = (line_in[x + (y * SCREENWIDTH)]);    // red
-                *(fb.fb + location + 3) = 0;      // transparency
-   
-                *(fb.fb + location + 4) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
-                *(fb.fb + location + 5) = (line_in[x + (y * SCREENWIDTH)]);     // green
-                *(fb.fb + location + 6) = (line_in[x + (y * SCREENWIDTH)]);    // red
-                *(fb.fb + location + 7) = 0;      // transparency
-   
+                // *(fb.fb + location + 0) = red * 2;
+                // *(fb.fb + location + 1) = green * 2;
+                // *(fb.fb + location + 2) = blue * 2;
+                // *(fb.fb + location + 3) = 0;
 
             // } else {
             //     printf("error, wrong depth\n");
             // }
+
+            drawPixel(x, y, red, green, blue, 0);
         }
 	}
 
     // if (first) {
+    //     // dump the first rendered screen to disk as raw pixels
     //     printf("dump image\n");
     //     first = false;
     //     FILE *f;
     //     f = fopen("img.bmp","wb");
     //     fwrite(line_in, sizeof(byte), SCREENWIDTH * SCREENHEIGHT, f);
     //     fclose(f);
+
+
+    //     // dump the color pallette
+    //     FILE *f2;
+    //     f2 = fopen("pallette","wb");
+    //     fwrite(colors, sizeof(byte), 256, f2);
+    //     fclose(f);
     // }
 
 
 
-    // rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, 0, 0);
-    rm_framebuffer_update(&fb, 0, 0, SCREENWIDTH * 2, SCREENHEIGHT * 2, 2, 0);
+    rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, 2, 0);
+
+// rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, 0, 0);
+
+    // rm_framebuffer_update(&fb, 0, 0, SCREENWIDTH * 2, SCREENHEIGHT * 2, 2, 0);
+    // rm_framebuffer_update(&fb, 0, 0, SCREENWIDTH * 2, SCREENHEIGHT * 2, 0, 0);
     // printf("frame buffer update done\n");
 
 
