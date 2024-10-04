@@ -464,7 +464,7 @@ void I_FinishUpdate (void)
             location = scale * x * (fb.depth / 8) +
                        scale * y * fb.bytesPerLine;
 
-            if (fb.depth == 32) {
+            // if (fb.depth == 32) {
                 *(fb.fb + location + 0) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
                 *(fb.fb + location + 1) = (line_in[x + (y * SCREENWIDTH)]);     // green
                 *(fb.fb + location + 2) = (line_in[x + (y * SCREENWIDTH)]);    // red
@@ -475,20 +475,24 @@ void I_FinishUpdate (void)
                 *(fb.fb + location + 6) = (line_in[x + (y * SCREENWIDTH)]);    // red
                 *(fb.fb + location + 7) = 0;      // transparency
    
-                *(fb.fb + location + 0 + y * fb.bytesPerLine) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
-                *(fb.fb + location + 1 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);     // green
-                *(fb.fb + location + 2 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);    // red
-                *(fb.fb + location + 3 + y * fb.bytesPerLine) = 0;      // transparency
+
+            location = scale * x * (fb.depth / 8) +
+                       scale * (y + 1) * fb.bytesPerLine;
+
+                *(fb.fb + location + 0) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
+                *(fb.fb + location + 1) = (line_in[x + (y * SCREENWIDTH)]);     // green
+                *(fb.fb + location + 2) = (line_in[x + (y * SCREENWIDTH)]);    // red
+                *(fb.fb + location + 3) = 0;      // transparency
    
-                *(fb.fb + location + 4 + y * fb.bytesPerLine) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
-                *(fb.fb + location + 5 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);     // green
-                *(fb.fb + location + 6 + y * fb.bytesPerLine) = (line_in[x + (y * SCREENWIDTH)]);    // red
-                *(fb.fb + location + 7 + y * fb.bytesPerLine) = 0;      // transparency
+                *(fb.fb + location + 4) =  (line_in[x + (y * SCREENWIDTH)]);        // blue
+                *(fb.fb + location + 5) = (line_in[x + (y * SCREENWIDTH)]);     // green
+                *(fb.fb + location + 6) = (line_in[x + (y * SCREENWIDTH)]);    // red
+                *(fb.fb + location + 7) = 0;      // transparency
    
 
-            } else {
-                printf("error, wrong depth\n");
-            }
+            // } else {
+            //     printf("error, wrong depth\n");
+            // }
         }
 	}
 
