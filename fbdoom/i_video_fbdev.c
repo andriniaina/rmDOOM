@@ -69,7 +69,6 @@ static struct color colors[256];
 // The screen buffer; this is modified to draw things to the screen
 
 byte *I_VideoBuffer = NULL;
-byte *I_VideoBuffer_FB = NULL;
 
 /* framebuffer file descriptor */
 // int fd_fb = 0;
@@ -205,7 +204,6 @@ void I_InitGraphics (void)
 
     /* Allocate screen to draw to */
 	I_VideoBuffer = (byte*)Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);  // For DOOM to draw on
-	I_VideoBuffer_FB = (byte*)malloc(fb.width * fb.height * (fb.depth/8));     // For a single write() syscall to fbdev
 
 	screenvisible = true;
 
@@ -215,8 +213,7 @@ void I_InitGraphics (void)
 
 void I_ShutdownGraphics (void)
 {
-	// Z_Free (I_VideoBuffer);
-	// free(I_VideoBuffer_FB);
+	Z_Free (I_VideoBuffer);
     rm_free_framebuffer(&fb);
 }
 
