@@ -277,7 +277,7 @@ void kbd_shutdown(void)
 static int kbd_init(void)
 {
     struct termios new_term;
-    char *files_to_try[] = {"/dev/tty", "/dev/tty0", "/dev/console", NULL};
+    char *files_to_try[] = { "/dev/input/event4", "/dev/tty1", "/dev/tty", "/dev/tty0", "/dev/console", NULL};
     int i;
     int flags;
     int found = 0;
@@ -290,7 +290,10 @@ static int kbd_init(void)
     for (i = 0; files_to_try[i] != NULL; i++) {
         /* Try to open the file. */
         kb = open(files_to_try[i], O_RDONLY);
-        if (kb < 0) continue;
+        if (kb < 0) {
+            printf("Failed opening %s.\n", files_to_try[i]);
+            continue;
+        }
         /* See if this is valid for our purposes. */
         if (tty_is_kbd(kb)) {
             printf("Using keyboard on %s.\n", files_to_try[i]);
@@ -371,7 +374,7 @@ int kbd_read(int *pressed, unsigned char *key)
 
     /* Print the keycode. The top bit is the pressed/released
        flag, and the lower seven are the keycode. */
-    //printf("%s: 0x%2X (%i)\n", *pressed ? "Released" : " Pressed", (unsigned int)*key, (unsigned int)*key);
+    printf("%s: 0x%2X (%i)\n", *pressed ? "Released" : " Pressed", (unsigned int)*key, (unsigned int)*key);
 
     return 1;
 }
@@ -436,6 +439,9 @@ void I_GetEvent(void)
     
     while (kbd_read(&pressed, &key))
     {
+
+        printf("key %d - %d", pressed, key);
+
         if (key == 0x0E) {
             kbd_shutdown();
             I_Quit();
