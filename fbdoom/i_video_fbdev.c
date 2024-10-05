@@ -416,19 +416,15 @@ void I_UpdateNoBlit (void)
 
 
 
-void drawPixel(int scale, int xoffset, int yoffset, int x, int y, uint8_t red, uint8_t green, uint8_t blue, uint8_t transparency) {
-    long int location = (xoffset + scale * x) * (fb.depth / 8) +
-                        yoffset*fb.bytesPerLine + scale * y * fb.bytesPerLine;
-
+void drawPixel(int scale, int xoffset, int yoffset, int x, int y, uint8_t red, uint8_t green, uint8_t blue, uint8_t transparency)
+{    
     for (int y_scale = 0; y_scale < scale; ++y_scale) {
         for (int x_scale = 0; x_scale < scale; ++x_scale) {
-
             // BGR?
-            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 0) = blue;
-            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 1) = green;
-            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 2) = red;
-
-            *(fb.fb + location + x_scale* (fb.depth / 8) + y_scale * fb.bytesPerLine + 3) = 0;
+            *(fb.fb + (yoffset - y * scale - y_scale) * (fb.depth / 8) + (xoffset + x * scale + x_scale) * fb.bytesPerLine + 0) = blue;
+            *(fb.fb + (yoffset - y * scale - y_scale) * (fb.depth / 8) + (xoffset + x * scale + x_scale) * fb.bytesPerLine + 1) = green;
+            *(fb.fb + (yoffset - y * scale - y_scale) * (fb.depth / 8) + (xoffset + x * scale + x_scale) * fb.bytesPerLine + 2) = red;
+            // alpha needs no update *(fb.fb + (xoffset + x * scale + x_scale) * (fb.depth / 8) + (yoffset + y * scale + y_scale) * fb.bytesPerLine + 3) = 0;
         }
     }
 }
@@ -438,16 +434,16 @@ void I_FinishUpdate (void)
 {
     unsigned char *line_in;
 
-    int scale = 4;
-    int xoffset = fb.width / 2 - 320 / 2 * scale;
-    int yoffset = fb.height / 2 - 200 / 2 * scale;
+    int scale = 6;
+
+    // Rotating 90 degrees makes a lot of sense. We rotate so that the type folio could be used.
+    // x is rotated, so really height, y is width
+    int xoffset = fb.height / 2 - 320 / 2 * scale;
+    int yoffset = fb.width - (fb.width / 2 - 200 / 2 * scale);
 
     /* the next frame is in the buffer, now we need to draw it to
        the rm_framebuffer */
     line_in  = (unsigned char *) I_VideoBuffer;
-
-    uint32_t magic = 2;
-
 
     for (int y = 0; y < SCREENHEIGHT; ++y) {
         for (int x = 0; x < SCREENWIDTH; ++x) {
@@ -463,7 +459,8 @@ void I_FinishUpdate (void)
     const int ui_mode = 3;        // looks good, way too slow, horrible framerate
     const int content_mode = 4;   // good looking, extra slow
     
-    rm_framebuffer_update(&fb, xoffset, yoffset, scale * 320, scale * 200, pen_mode, 0);
+    // rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, animation_mode, 0);
+    rm_framebuffer_update(&fb, xoffset, yoffset, fb.width - xoffset, fb.height - yoffset, animation_mode, 0);
 }
 
 //
