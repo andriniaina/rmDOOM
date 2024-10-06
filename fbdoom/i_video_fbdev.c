@@ -412,15 +412,14 @@ void I_UpdateNoBlit (void)
 #define GFX_RGB565_B(color)			(0x001F & color)
 
 
-
-void drawPixel(int scale, int xoffset, int yoffset, int x, int y, uint8_t red, uint8_t green, uint8_t blue, uint8_t transparency)
+void drawPixelScaled(int scale, int xoffset, int yoffset, int x, int y, uint8_t red, uint8_t green, uint8_t blue, uint8_t transparency)
 {    
     for (int y_scale = 0; y_scale < scale; ++y_scale) {
         for (int x_scale = 0; x_scale < scale; ++x_scale) {
             // BGR?
-            *(fb.fb + (yoffset - y * scale - y_scale) * (fb.depth / 8) + (xoffset + x * scale + x_scale) * fb.bytesPerLine + 0) = blue;
-            *(fb.fb + (yoffset - y * scale - y_scale) * (fb.depth / 8) + (xoffset + x * scale + x_scale) * fb.bytesPerLine + 1) = green;
-            *(fb.fb + (yoffset - y * scale - y_scale) * (fb.depth / 8) + (xoffset + x * scale + x_scale) * fb.bytesPerLine + 2) = red;
+            *(fb.fb + (xoffset + x * scale + x_scale) * (fb.depth / 8) + (yoffset + y * scale + y_scale) * fb.bytesPerLine + 0) = blue;
+            *(fb.fb + (xoffset + x * scale + x_scale) * (fb.depth / 8) + (yoffset + y * scale + y_scale) * fb.bytesPerLine + 1) = green;
+            *(fb.fb + (xoffset + x * scale + x_scale) * (fb.depth / 8) + (yoffset + y * scale + y_scale) * fb.bytesPerLine + 2) = red;
             // alpha needs no update *(fb.fb + (xoffset + x * scale + x_scale) * (fb.depth / 8) + (yoffset + y * scale + y_scale) * fb.bytesPerLine + 3) = 0;
         }
     }
@@ -435,8 +434,8 @@ void I_FinishUpdate (void)
 
     // Rotating 90 degrees makes a lot of sense. We rotate so that the type folio could be used.
     // x is rotated, so really height, y is width
-    int xoffset = fb.height / 2 - 320 / 2 * scale;
-    int yoffset = fb.width - (fb.width / 2 - 200 / 2 * scale);
+    int xoffset = (fb.width - 200 * scale)/2;
+    int yoffset = (fb.height - 320 * scale)/2;
 
     /* the next frame is in the buffer, now we need to draw it to
        the rm_framebuffer */
@@ -446,7 +445,17 @@ void I_FinishUpdate (void)
         for (int x = 0; x < SCREENWIDTH; ++x) {
             char color_8bit = line_in[x + (y * SCREENWIDTH)];
             struct color c = colors[color_8bit]; 
-            drawPixel(scale, xoffset, yoffset, x, y, c.r,  c.g, c.b, 0);
+
+
+            /* Rotation and translation:
+                x = - y + 200
+                y = x
+            */
+
+            int x_rotated = - y + 200;
+            int y_rotated = x;
+
+            drawPixelScaled(scale, xoffset, yoffset, x_rotated, y_rotated, c.r,  c.g, c.b, 0);
         }
 	}
 
@@ -455,8 +464,7 @@ void I_FinishUpdate (void)
     const int animation_mode = 2; // grayscale, fast, lots of ghosting
     const int ui_mode = 3;        // looks good, way too slow, horrible framerate
     const int content_mode = 4;   // good looking, extra slow
-    
-    // rm_framebuffer_update(&fb, 0, 0, fb.width, fb.height, animation_mode, 0);
+
     rm_framebuffer_update(&fb, xoffset, yoffset, fb.width - xoffset, fb.height - yoffset, animation_mode, 0);
 }
 
