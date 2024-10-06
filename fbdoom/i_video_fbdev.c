@@ -190,17 +190,19 @@ void I_InitGraphics (void)
     rm_init_framebuffer(&fb);
     printf("I_InitGraphics: epaper screen size: w x h: %d x %d depth: %d bytesPerLine: %d\n", fb.width, fb.height, fb.depth, fb.bytesPerLine);
 
-    // i = M_CheckParmWithArgs("-scaling", 1);
-    // if (i > 0) {
-    //     i = atoi(myargv[i + 1]);
-    //     fb_scaling = i;
-    //     printf("I_InitGraphics: Scaling factor: %d\n", fb_scaling);
-    // } else {
-    //     fb_scaling = fb.xres / SCREENWIDTH;
-    //     if (fb.yres / SCREENHEIGHT < fb_scaling)
-    //         fb_scaling = fb.yres / SCREENHEIGHT;
-    //     printf("I_InitGraphics: Auto-scaling factor: %d\n", fb_scaling);
-    // }
+    i = M_CheckParmWithArgs("-scaling", 1);
+    if (i > 0) {
+        i = atoi(myargv[i + 1]);
+        fb_scaling = i;
+        printf("I_InitGraphics: Scaling factor: %d\n", fb_scaling);
+    } else {
+        // change width/height, because we rotate 90 degrees
+        fb_scaling = fb.height / SCREENWIDTH;
+        if (fb.height / SCREENHEIGHT < fb_scaling) {
+            fb_scaling = fb.height / SCREENHEIGHT;
+        }
+        printf("I_InitGraphics: Auto-scaling factor: %d\n", fb_scaling);
+    }
 
     /* Allocate screen to draw to */
 	I_VideoBuffer = (byte*)Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);  // For DOOM to draw on
@@ -430,12 +432,10 @@ void I_FinishUpdate (void)
 {
     unsigned char *line_in;
 
-    int scale = 6;
-
     // Rotating 90 degrees makes a lot of sense. We rotate so that the type folio could be used.
     // x is rotated, so really height, y is width
-    int xoffset = (fb.width - 200 * scale)/2;
-    int yoffset = (fb.height - 320 * scale)/2;
+    int xoffset = (fb.width - 200 * fb_scaling)/2;
+    int yoffset = (fb.height - 320 * fb_scaling)/2;
 
     /* the next frame is in the buffer, now we need to draw it to
        the rm_framebuffer */
@@ -446,16 +446,13 @@ void I_FinishUpdate (void)
             char color_8bit = line_in[x + (y * SCREENWIDTH)];
             struct color c = colors[color_8bit]; 
 
-
             /* Rotation and translation:
                 x = - y + 200
                 y = x
             */
-
             int x_rotated = - y + 200;
             int y_rotated = x;
-
-            drawPixelScaled(scale, xoffset, yoffset, x_rotated, y_rotated, c.r,  c.g, c.b, 0);
+            drawPixelScaled(fb_scaling, xoffset, yoffset, x_rotated, y_rotated, c.r,  c.g, c.b, 0);
         }
 	}
 
