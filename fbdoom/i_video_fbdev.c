@@ -187,7 +187,7 @@ void I_InitGraphics (void)
     //         fb.red.length, fb.green.length, fb.blue.length, fb.transp.length, fb.red.offset, fb.green.offset, fb.blue.offset, fb.transp.offset);
 
     printf("I_InitGraphics: DOOM screen size: w x h: %d x %d\n", SCREENWIDTH, SCREENHEIGHT);
-    rm_init_framebuffer(&fb);
+    rm_framebuffer_open(&fb);
     printf("I_InitGraphics: epaper screen size: w x h: %d x %d depth: %d bytesPerLine: %d\n", fb.width, fb.height, fb.depth, fb.bytesPerLine);
 
     i = M_CheckParmWithArgs("-scaling", 1);
@@ -216,7 +216,7 @@ void I_InitGraphics (void)
 void I_ShutdownGraphics (void)
 {
 	Z_Free (I_VideoBuffer);
-    rm_free_framebuffer(&fb);
+    rm_framebuffer_close(&fb);
 }
 
 void I_StartFrame (void)
